@@ -1,0 +1,970 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Strabismus Clinic Dashboard</title>
+<style>
+:root {
+  --bg: #f0efe8;
+  --surface: #ffffff;
+  --surface2: #f5f4f0;
+  --surface3: #eceae3;
+  --border: rgba(0,0,0,0.07);
+  --border2: rgba(0,0,0,0.12);
+  --text: #1a1915;
+  --text2: #6b6860;
+  --text3: #b0ae a8;
+  --text3: #aaa89f;
+  --radius: 10px;
+  --radius-lg: 16px;
+  --green: #1D9E75;
+  --amber: #D4860F;
+  --red: #C93F3E;
+  --darkred: #8B2020;
+  --xdarkred: #4A0E0E;
+  --blue: #1A5FA8;
+  --accent: #2E7DD1;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #141412; --surface: #1e1d1b; --surface2: #252420; --surface3: #2c2b28;
+    --border: rgba(255,255,255,0.07); --border2: rgba(255,255,255,0.13);
+    --text: #edecea; --text2: #9c9a93; --text3: #5a5855;
+  }
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; min-height: 100vh; }
+
+/* TOPBAR */
+.topbar { background: var(--surface); border-bottom: 1px solid var(--border); padding: .9rem 1.75rem; display: flex; align-items: center; gap: 1rem; position: sticky; top: 0; z-index: 100; backdrop-filter: blur(8px); }
+.topbar-brand { display: flex; align-items: center; gap: 10px; }
+.topbar-icon { width: 32px; height: 32px; background: var(--text); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
+.topbar h1 { font-size: 15px; font-weight: 600; letter-spacing: -.01em; }
+.topbar-sub { font-size: 11px; color: var(--text3); margin-top: 1px; }
+.search-box { margin-left: auto; display: flex; gap: 6px; align-items: center; }
+.search-box input, .search-box select {
+  padding: 6px 12px; font-size: 12px;
+  border: 1px solid var(--border2); border-radius: 8px;
+  background: var(--surface2); color: var(--text); outline: none;
+  transition: border-color .15s;
+}
+.search-box input { width: 200px; }
+.search-box input:focus, .search-box select:focus { border-color: var(--accent); }
+.refresh-btn { padding: 6px 12px; font-size: 12px; border: 1px solid var(--border2); border-radius: 8px; background: var(--surface2); color: var(--text2); cursor: pointer; display: flex; align-items: center; gap: 5px; }
+.refresh-btn:hover { background: var(--surface3); color: var(--text); }
+
+/* KPI */
+.kpi-row { display: flex; gap: 1px; padding: 1.25rem 1.75rem; flex-wrap: wrap; gap: 10px; }
+.kpi { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: .8rem 1.1rem; min-width: 130px; flex: 1; }
+.kpi-label { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 5px; }
+.kpi-value { font-size: 26px; font-weight: 600; line-height: 1; letter-spacing: -.02em; }
+.kpi-sub { font-size: 10px; color: var(--text3); margin-top: 3px; }
+
+/* TABLE */
+.table-wrap { padding: 0 1.75rem 2.5rem; }
+.tbl-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.tbl-stat { font-size: 12px; color: var(--text3); }
+.tbl-container { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
+table { width: 100%; border-collapse: collapse; font-size: 12px; }
+thead th { background: var(--surface2); color: var(--text2); font-weight: 600; padding: 9px 14px; text-align: left; font-size: 10px; text-transform: uppercase; letter-spacing: .05em; border-bottom: 1px solid var(--border); white-space: nowrap; }
+tbody td { padding: 10px 14px; border-bottom: 1px solid var(--border); vertical-align: middle; color: var(--text); }
+tbody tr:last-child td { border-bottom: none; }
+tbody tr { cursor: pointer; transition: background .1s; }
+tbody tr:hover td { background: var(--surface2); }
+.badge { display: inline-block; padding: 2px 9px; border-radius: 100px; font-size: 10px; font-weight: 600; }
+.bm { background: #ddeeff; color: #1A4E8A; }
+.bf { background: #fde8ef; color: #8A2040; }
+.dx-tag { display: inline-block; padding: 3px 9px; border-radius: 6px; font-size: 11px; font-weight: 500; background: var(--surface2); color: var(--text2); border: 1px solid var(--border2); }
+.has-data { color: var(--green); font-size: 11px; font-weight: 500; }
+.no-data { color: var(--text3); font-size: 11px; }
+
+/* MODAL OVERLAY */
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+  z-index: 200; display: none; align-items: center; justify-content: center;
+  padding: 1.5rem; backdrop-filter: blur(4px);
+}
+.modal-overlay.open { display: flex; }
+.modal {
+  background: var(--surface); border-radius: 20px;
+  max-width: 900px; width: 100%; max-height: 88vh; overflow-y: auto;
+  box-shadow: 0 32px 80px rgba(0,0,0,.25), 0 0 0 1px var(--border);
+  animation: modalIn .2s ease;
+}
+
+/* TRACKING */
+.track-panel { background: var(--surface2); border: 1px solid var(--border); border-radius: 14px; padding: 1rem 1.25rem; }
+.compare-wrap { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+.compare-col-label { font-size: 10px; font-weight: 700; color: var(--text3); text-transform: uppercase; letter-spacing: .07em; margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid var(--border2); }
+.compare-col-label.latest { color: var(--accent); }
+.no-fu { font-size: 12px; color: var(--text3); font-style: italic; padding: .5rem 0; }
+.fu-history { margin-top: .75rem; }
+.fu-history-title { font-size: 10px; font-weight: 700; color: var(--text3); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
+.fu-row-item { display: flex; align-items: flex-start; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 11px; }
+.fu-row-item:last-child { border-bottom: none; }
+.fu-date { color: var(--text3); flex-shrink: 0; width: 80px; }
+.fu-content { color: var(--text2); flex: 1; line-height: 1.5; }
+.input-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 8px; margin-top: .75rem; }
+.input-group { display: flex; flex-direction: column; gap: 3px; }
+.input-group label { font-size: 9px; font-weight: 700; color: var(--text3); text-transform: uppercase; letter-spacing: .05em; }
+.input-group input, .input-group textarea { padding: 6px 9px; font-size: 12px; border: 1px solid var(--border2); border-radius: 7px; background: var(--surface); color: var(--text); outline: none; font-family: inherit; resize: vertical; }
+.input-group input:focus, .input-group textarea:focus { border-color: var(--accent); }
+.input-group.full { grid-column: 1/-1; }
+.form-footer { display: flex; gap: 8px; align-items: center; margin-top: 10px; }
+.save-ok { font-size: 12px; color: var(--green); display: none; }
+.btn { padding: 6px 14px; font-size: 12px; border-radius: 8px; cursor: pointer; border: 1px solid var(--border2); background: var(--surface2); color: var(--text2); transition: all .15s; font-family: inherit; }
+.btn:hover { background: var(--surface3); color: var(--text); }
+.btn-primary { background: var(--text); color: var(--surface); border-color: var(--text); }
+.btn-primary:hover { opacity: .85; }
+@keyframes modalIn { from { opacity:0; transform: translateY(12px) scale(.98); } to { opacity:1; transform: none; } }
+
+/* MODAL HEADER */
+.modal-header {
+  padding: 1.4rem 1.5rem 1.1rem;
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem;
+  position: sticky; top: 0; background: var(--surface); z-index: 10;
+  border-bottom: 1px solid var(--border);
+}
+.modal-header-left { display: flex; align-items: flex-start; gap: 12px; }
+.modal-id-badge { background: var(--text); color: var(--surface); border-radius: 8px; padding: 4px 10px; font-size: 12px; font-weight: 700; letter-spacing: .02em; flex-shrink: 0; margin-top: 2px; }
+.modal-header h2 { font-size: 16px; font-weight: 600; letter-spacing: -.01em; }
+.modal-header p { font-size: 12px; color: var(--text2); margin-top: 3px; }
+.modal-close { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 6px 12px; cursor: pointer; font-size: 12px; color: var(--text2); flex-shrink: 0; transition: all .1s; }
+.modal-close:hover { background: var(--surface3); color: var(--text); }
+
+/* MODAL BODY */
+.modal-body { padding: 1.4rem 1.5rem; display: flex; flex-direction: column; gap: 1.4rem; }
+.modal-section-title { font-size: 10px; font-weight: 700; color: var(--text3); text-transform: uppercase; letter-spacing: .08em; margin-bottom: 10px; }
+
+/* META GRID */
+.meta-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 6px; }
+.meta-item { background: var(--surface2); border-radius: 9px; padding: .6rem .85rem; border: 1px solid var(--border); }
+.meta-label { font-size: 9px; color: var(--text3); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 3px; }
+.meta-value { font-size: 13px; font-weight: 500; line-height: 1.3; }
+
+/* PCT + EOM PANEL */
+.pct-eom-panel { background: var(--surface2); border: 1px solid var(--border); border-radius: 14px; padding: 1.1rem 1.25rem; }
+.pct-eom-inner { display: flex; gap: 2rem; flex-wrap: wrap; align-items: flex-start; }
+
+/* PCT GRID */
+.pct-block { flex-shrink: 0; }
+.pct-label { font-size: 10px; font-weight: 700; color: var(--text3); text-transform: uppercase; letter-spacing: .07em; margin-bottom: 8px; }
+.pct-grid {
+  display: grid; grid-template-columns: repeat(3, 82px); grid-template-rows: repeat(3, 72px);
+  gap: 2px; background: var(--border2); border: 1.5px solid var(--border2);
+  border-radius: 10px; overflow: hidden;
+}
+.pct-cell { background: var(--surface); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 4px; transition: background .1s; }
+.pct-cell.primary { outline: 2px solid var(--text); outline-offset: -2px; background: var(--surface); }
+.pct-pos { font-size: 8px; color: var(--text3); margin-bottom: 2px; text-transform: uppercase; letter-spacing: .04em; }
+.pct-empty { font-size: 18px; color: var(--border2); }
+.pct-val { font-size: 19px; font-weight: 600; line-height: 1.05; letter-spacing: -.02em; }
+.pct-type { font-size: 10px; font-weight: 700; color: var(--text2); letter-spacing: .02em; }
+.pct-divider { width: 38px; height: 1px; background: var(--border2); margin: 3px 0; }
+.pct-note { font-size: 10px; color: var(--text3); margin-top: 7px; }
+.pct-cantfix { font-size: 9px; font-weight: 600; color: var(--text3); font-style: italic; }
+.pct-ortho { font-size: 12px; font-weight: 600; color: var(--green); }
+.pct-special { font-size: 10px; color: var(--text2); font-style: italic; text-align: center; padding: 4px; line-height: 1.5; }
+
+/* EOM */
+.eom-block { flex-shrink: 0; }
+.eom-label-row { font-size: 10px; font-weight: 700; color: var(--text3); text-transform: uppercase; letter-spacing: .07em; margin-bottom: 8px; }
+.eom-eyes { display: flex; gap: 8px; align-items: flex-start; }
+.eom-eye { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+.eom-eye-label { font-size: 11px; font-weight: 700; color: var(--text); letter-spacing: .02em; }
+.eom-sep { width: 1.5px; height: 52px; background: var(--border2); border-radius: 1px; margin-top: 34px; align-self: flex-start; }
+
+/* GRADING STRIP — inline under EOM eyes */
+.grading-strip { display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap; align-items: center; }
+.grade-chip { display: flex; align-items: center; gap: 4px; font-size: 10px; color: var(--text2); }
+.grade-chip-val { font-size: 11px; font-weight: 700; }
+
+.no-pct { font-size: 13px; color: var(--text3); font-style: italic; }
+
+/* REMARK */
+.remark-box { background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: .75rem 1rem; font-size: 13px; color: var(--text2); line-height: 1.6; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-brand">
+    <div class="topbar-icon">👁</div>
+    <div>
+      <h1>Strabismus Clinic</h1>
+      <div class="topbar-sub" id="subtitle">Loading…</div>
+    </div>
+  </div>
+  <div class="search-box">
+    <input type="text" id="q" placeholder="Search ID, Dx, CC…" oninput="renderTable()">
+    <select id="sexF" onchange="renderTable()">
+      <option value="">All sexes</option>
+      <option value="M">Male</option>
+      <option value="F">Female</option>
+    </select>
+    <select id="dxF" onchange="renderTable()">
+      <option value="">All diagnoses</option>
+    </select>
+    <button class="refresh-btn" id="refreshBtn">↻ Refresh</button>
+  </div>
+</div>
+
+<div class="kpi-row">
+  <div class="kpi"><div class="kpi-label">Total patients</div><div class="kpi-value" id="kN">—</div></div>
+  <div class="kpi"><div class="kpi-label">Mean age</div><div class="kpi-value" id="kAge">—</div><div class="kpi-sub" id="kAgeR"></div></div>
+  <div class="kpi"><div class="kpi-label">With PCT data</div><div class="kpi-value" id="kPCT">—</div></div>
+  <div class="kpi"><div class="kpi-label">With EOM data</div><div class="kpi-value" id="kEOM">—</div></div>
+  <div class="kpi"><div class="kpi-label">With neuroimaging</div><div class="kpi-value" id="kNeuro">—</div></div>
+</div>
+
+<div class="table-wrap">
+  <div class="tbl-header">
+    <div class="tbl-stat" id="tstat"></div>
+  </div>
+  <div class="tbl-container">
+    <table>
+      <thead><tr>
+        <th>ID</th><th>Age</th><th>Sex</th><th>Referral</th><th>CC</th><th>Dx</th><th>PCT</th><th>EOM</th><th>First visit</th>
+      </tr></thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modal" onclick="closeModal(event)">
+  <div class="modal" id="modalBox">
+    <div class="modal-header">
+      <div class="modal-header-left">
+        <div class="modal-id-badge" id="mIdBadge"></div>
+        <div>
+          <h2 id="mTitle">Patient</h2>
+          <p id="mSub"></p>
+        </div>
+      </div>
+      <button class="modal-close" onclick="closeModal()">✕ Close</button>
+    </div>
+    <div class="modal-body">
+      <div>
+        <div class="modal-section-title">Patient info</div>
+        <div class="meta-grid" id="mMeta"></div>
+      </div>
+      <div id="mPctSection">
+        <div class="modal-section-title">Prism cover test &amp; EOM — initial visit</div>
+        <div class="pct-eom-panel">
+          <div id="mPctEom"></div>
+        </div>
+      </div>
+      <div>
+        <div class="modal-section-title">Follow-up</div>
+        <div class="track-panel">
+          <div class="compare-wrap" id="mCompare"></div>
+          <div class="fu-history" id="mFuHistory"></div>
+          <div style="margin-top:1rem;">
+            <div style="font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">Add follow-up record</div>
+            <div class="input-grid">
+              <div class="input-group" style="max-width:160px"><label>Date</label><input type="date" id="fuDate"></div>
+              <div class="input-group full"><label>PCT</label><input type="text" id="fuPct" placeholder="e.g. F 10-12-14PD ET"></div>
+              <div class="input-group full"><label>EOM</label><input type="text" id="fuEom" placeholder="e.g. limited abduction (-1 os)"></div>
+              <div class="input-group full"><label>Note</label><input type="text" id="fuNote" placeholder="Optional"></div>
+            </div>
+            <div class="form-footer">
+              <button class="btn btn-primary" id="fuSaveBtn" onclick="submitFU()">💾 Save</button>
+              <button class="btn" onclick="clearFuForm()">Clear</button>
+              <span class="save-ok" id="fuSaveOk">✓ Saved!</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div id="mRemarkSection">
+        <div class="modal-section-title">Remarks</div>
+        <div class="remark-box" id="mRemark"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const SUPA_URL = 'https://eiuztjstarcyrgegdeyx.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVpdXp0anN0YXJjeXJnZWdkZXl4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEzMzg4MjUsImV4cCI6MjA5NjkxNDgyNX0.wxOSIaL85pDNqAWJrI3NSPTGxBOXEEn3RUsgd5Sbgs4';
+
+const supaFetch = async (table, params = '') => {
+  const res = await fetch(`${SUPA_URL}/rest/v1/${table}?select=*${params}`, {
+    headers: { 'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}` }
+  });
+  return res.json();
+};
+
+const supaInsert = async (table, row) => {
+  const res = await fetch(`${SUPA_URL}/rest/v1/${table}`, {
+    method: 'POST',
+    headers: {
+      'apikey': SUPA_KEY,
+      'Authorization': `Bearer ${SUPA_KEY}`,
+      'Content-Type': 'application/json',
+      'Prefer': 'return=minimal'
+    },
+    body: JSON.stringify(row)
+  });
+  return res.ok;
+};
+
+let RAW = [], FOLLOWUPS = [], currentPatient = null;
+
+// ── COLOUR HELPERS ─────────────────────────────────────────────────────────
+function gradeColor(g) {
+  if (g === null || g === undefined) return 'var(--green)';
+  if (typeof g === 'string') {
+    if (g === 'trace' || g === '0.3' || g === '0.5') return 'var(--amber)';
+    if (g.includes('~')) {
+      const parts = g.split('~').map(Number);
+      const max = Math.max(...parts);
+      return max >= 3 ? 'var(--darkred)' : max >= 2 ? 'var(--red)' : 'var(--amber)';
+    }
+  }
+  const n = Math.abs(parseFloat(g));
+  if (n === 0) return 'var(--green)';
+  if (n <= 1) return 'var(--amber)';
+  if (n <= 2) return 'var(--red)';
+  if (n <= 3) return 'var(--darkred)';
+  return 'var(--xdarkred)';
+}
+function overColor(g) { return 'var(--blue)'; }
+
+// ── PCT PARSER ─────────────────────────────────────────────────────────────
+function parsePCT(raw) {
+  if (!raw || !raw.trim()) return null;
+  const r = raw.trim();
+
+  // Special cases
+  if (r.toLowerCase().startsWith('hirschberg')) return { special: r };
+
+  const result = { far: null, near: null };
+
+  // Parse far and near sections
+  function parseSection(str) {
+    // str like: "35-18-8PD ET" or "10PD XT, 0-2-2PD R/L, 5V2PD R/L" or "ortho OU" or "4-5-3PD L/R, 4V6PD L/R"
+    const sec = { right: null, primary: null, left: null, tiltR: null, tiltL: null, horiz: null };
+
+    // Check for ortho
+    if (/^ortho\s*(ou)?$/i.test(str.trim())) {
+      sec.primary = { val: 'ortho', type: '' };
+      return sec;
+    }
+
+    // Split by comma
+    const parts = str.split(',').map(s => s.trim());
+
+    for (const part of parts) {
+      // Vertical gaze: "5V2PD R/L" or "10V6PD R/L"
+      const vMatch = part.match(/^(\d+)V(\d+)\s*PD\s+([A-Z\/\(\)]+)$/i);
+      if (vMatch) {
+        sec.tiltR = { val: vMatch[1], type: vMatch[3].toUpperCase() };
+        sec.tiltL = { val: vMatch[2], type: vMatch[3].toUpperCase() };
+        continue;
+      }
+
+      // Gaze triples: "35-18-8PD ET" or ">30PD L/R" or "8-8-14 PD ET" or "can't-8PD-ortho ET"
+      const triMatch = part.match(/^([\d>]+|can't)[\- ]([\w.>]+)[\- ]([\w.]+)\s*(?:sc\s*)?PD\s+([A-Z\/\(\)]+)$/i);
+      if (triMatch) {
+        const [, r, p, l, type] = triMatch;
+        sec.right = { val: r.toLowerCase() === "can't" ? "can't fix" : r, type: type.toUpperCase() };
+        sec.primary = { val: p.toLowerCase() === 'ortho' ? 'ortho' : p, type: type.toUpperCase() };
+        sec.left = { val: l.toLowerCase() === 'ortho' ? 'ortho' : l, type: type.toUpperCase() };
+        continue;
+      }
+
+      // Single primary: "30PD ET" or ">30PD L/R" or "8PD L/R" or "45PD ET" or "8PD XT" or "35PD X(T)"
+      const singleMatch = part.match(/^(>?\d+)\s*(?:sc\s*)?PD\s+([A-Z\/\(\)]+)$/i);
+      if (singleMatch) {
+        const val = singleMatch[1];
+        const type = singleMatch[2].toUpperCase();
+        // If we already have a primary (horiz component), store as secondary
+        if (sec.primary) {
+          sec.horiz = { val, type };
+        } else {
+          sec.primary = { val, type };
+        }
+        continue;
+      }
+
+      // Gaze triples without hyphen separator for numbers: already handled above
+    }
+    return sec;
+  }
+
+  // Split far / near
+  const farMatch = r.match(/F\s+(.+?)(?:\s*,\s*N\s+(.+))?$/i);
+  if (farMatch) {
+    result.far = parseSection(farMatch[1]);
+    if (farMatch[2]) result.near = parseSection(farMatch[2]);
+  } else {
+    result.far = parseSection(r);
+  }
+
+  return result;
+}
+
+// ── EOM PARSER ─────────────────────────────────────────────────────────────
+// Returns {od: {up,down,left,right,ul,ur,dl,dr, frozen}, os: {same}}
+function parseEOM(raw) {
+  if (!raw || !raw.trim()) return null;
+  const r = raw.trim().toLowerCase();
+
+  const od = { up:0,down:0,left:0,right:0,ul:0,ur:0,dl:0,dr:0,frozen:false,note:'' };
+  const os = { up:0,down:0,left:0,right:0,ul:0,ur:0,dl:0,dr:0,frozen:false,note:'' };
+
+  if (r === 'full ou') return { od, os };
+
+  if (r.includes('frozen od')) { od.frozen = true; }
+  if (r.includes('frozen os')) { os.frozen = true; }
+
+  // Parse limitation/overaction entries
+  // patterns: "limited abduction (-2 od)", "limited supraduction (-2 ou)", "IOOA (+1 od)", "limited adduction (-1 od, -2 os)"
+  const entries = raw.split(/,(?![^(]*\))/); // split by comma not inside parens
+
+  for (const entry of entries) {
+    const e = entry.trim();
+
+    // IOOA
+    const iooaMatch = e.match(/IOOA\s*\(([+\-\d.]+)\s+(od|os|ou)\)/i);
+    if (iooaMatch) {
+      const grade = iooaMatch[1];
+      const eye = iooaMatch[2].toLowerCase();
+      // IO = elevation in adduction
+      // OD: nasal=right, so IO action = upper-right (ur)
+      // OS: nasal=left, so IO action = upper-left (ul)
+      if (eye === 'od' || eye === 'ou') od.ur = grade;
+      if (eye === 'os' || eye === 'ou') os.ul = grade;
+      continue;
+    }
+
+    // limited/restricted movement
+    const limMatch = e.match(/limited\s+(\w+)\s*\(([^)]+)\)/i);
+    if (limMatch) {
+      const dir = limMatch[1].toLowerCase();
+      const details = limMatch[2];
+
+      // Parse eye-specific grades: "-2 od", "-1 os", "-1 od, -2 os", "-2 ou", "-1~2 os"
+      const eyeParts = details.match(/([\-\d~.]+)\s*(od|os|ou)/gi) || [details + ' ou'];
+
+      for (const ep of eyeParts) {
+        const m = ep.match(/([\-\d~.]+)\s*(od|os|ou)/i);
+        if (!m) continue;
+        let grade = m[1];
+        // strip leading minus for storage, keep sign info
+        const eye = m[2].toLowerCase();
+
+        const setDir = (eyeObj, direction, g) => {
+          // In patient-facing view:
+          // OD: temporal=left, nasal=right
+          // OS: temporal=right, nasal=left
+          switch(direction) {
+            case 'abduction':
+              // OD abducts left, OS abducts right
+              if (eye === 'od' || eye === 'ou') eyeObj === od ? od.left = g : null;
+              if (eye === 'os' || eye === 'ou') eyeObj === os ? os.right = g : null;
+              break;
+            case 'adduction':
+              if (eye === 'od' || eye === 'ou') eyeObj === od ? od.right = g : null;
+              if (eye === 'os' || eye === 'ou') eyeObj === os ? os.left = g : null;
+              break;
+            case 'supraduction': eyeObj.up = g; break;
+            case 'infraduction': eyeObj.down = g; break;
+          }
+        };
+
+        const applyGrade = (direction, gradeStr, eyeCode) => {
+          const apply = (obj) => {
+            switch(direction) {
+              case 'abduction':
+                if (eyeCode === 'od') obj === od ? (od.left = gradeStr) : null;
+                else if (eyeCode === 'os') obj === os ? (os.right = gradeStr) : null;
+                else { od.left = gradeStr; os.right = gradeStr; }
+                break;
+              case 'adduction':
+                if (eyeCode === 'od') obj === od ? (od.right = gradeStr) : null;
+                else if (eyeCode === 'os') obj === os ? (os.left = gradeStr) : null;
+                else { od.right = gradeStr; os.left = gradeStr; }
+                break;
+              case 'supraduction':
+                if (eyeCode === 'od') od.up = gradeStr;
+                else if (eyeCode === 'os') os.up = gradeStr;
+                else { od.up = gradeStr; os.up = gradeStr; }
+                break;
+              case 'infraduction':
+                if (eyeCode === 'od') od.down = gradeStr;
+                else if (eyeCode === 'os') os.down = gradeStr;
+                else { od.down = gradeStr; os.down = gradeStr; }
+                break;
+            }
+          };
+          if (eyeCode === 'od') apply(od);
+          else if (eyeCode === 'os') apply(os);
+          else { apply(od); apply(os); }
+        };
+
+        applyGrade(dir, grade.replace(/^-/, ''), eye);
+      }
+      continue;
+    }
+
+    // slow saccade note
+    if (e.includes('slow saccade')) {
+      const m = e.match(/adduction\s*\(([\-\d~.]+)\s*(od|os|ou)[^)]*\)/i);
+      if (m) {
+        const g = m[1].replace(/^-/,'');
+        const eye = m[2].toLowerCase();
+        if (eye === 'od' || eye === 'ou') od.right = g;
+        if (eye === 'os' || eye === 'ou') os.left = g;
+        os.note = 'slow saccade';
+      }
+    }
+  }
+
+  return { od, os };
+}
+
+// ── RENDER EOM SVG ─────────────────────────────────────────────────────────
+function eomSVG(eyeData, eyeLabel, isOS) {
+  if (!eyeData) return '';
+  const { up, down, left, right, ul, ur, dl, dr, frozen, note } = eyeData;
+
+  const gradeText = (val, isOver=false) => {
+    if (val === 0 || val === '0' || val === undefined || val === null) return { t: '0', c: 'var(--green)' };
+    if (frozen) return { t: 'frozen', c: 'var(--darkred)' };
+    const s = String(val);
+    const col = isOver ? overColor(s) : gradeColor(s);
+    return { t: (isOver ? '+' : '-') + s, c: col };
+  };
+
+  const g = {
+    up: gradeText(up),
+    down: gradeText(down),
+    left: gradeText(left),
+    right: gradeText(right),
+    ul: gradeText(ul, ul && String(ul).startsWith('+') ? true : parseFloat(ul||0)>0),
+    ur: gradeText(ur, ur && String(ur).startsWith('+') ? true : parseFloat(ur||0)>0),
+    dl: gradeText(dl),
+    dr: gradeText(dr),
+  };
+
+  const nasalLabel = isOS ? 'nasal' : 'nasal';
+  const tempLabel = isOS ? 'temporal' : 'temporal';
+  // OD: left=temporal, right=nasal
+  // OS: left=nasal, right=temporal
+  const leftLabel = isOS ? 'nasal' : 'temporal';
+  const rightLabel = isOS ? 'temporal' : 'nasal';
+
+  if (frozen) {
+    return `<div class="eom-eye">
+      <div class="eom-eye-label">${eyeLabel}</div>
+      <div style="width:120px;height:120px;background:var(--darkred);border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;">
+        <div style="font-size:11px;font-weight:700;color:#fff;letter-spacing:.08em;text-transform:uppercase;">Frozen</div>
+        <div style="font-size:9px;color:rgba(255,255,255,0.6);letter-spacing:.05em;">No movement</div>
+      </div>
+    </div>`;
+  }
+
+  return `<div class="eom-eye">
+    <div class="eom-eye-label">${eyeLabel}</div>
+    <svg width="120" height="120" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+      <line x1="60" y1="5" x2="60" y2="115" stroke="var(--border2)" stroke-width="1"/>
+      <line x1="5" y1="60" x2="115" y2="60" stroke="var(--border2)" stroke-width="1"/>
+      <circle cx="60" cy="60" r="16" fill="var(--surface2)" stroke="var(--border2)" stroke-width="1"/>
+      <circle cx="60" cy="60" r="4" fill="var(--text)"/>
+      <text x="60" y="17" text-anchor="middle" font-size="13" font-weight="500" fill="${g.up.c}" font-family="-apple-system,sans-serif">${g.up.t}</text>
+      <text x="60" y="112" text-anchor="middle" font-size="13" font-weight="500" fill="${g.down.c}" font-family="-apple-system,sans-serif">${g.down.t}</text>
+      <text x="13" y="64" text-anchor="middle" font-size="13" font-weight="500" fill="${g.left.c}" font-family="-apple-system,sans-serif">${g.left.t}</text>
+      <text x="107" y="64" text-anchor="middle" font-size="13" font-weight="500" fill="${g.right.c}" font-family="-apple-system,sans-serif">${g.right.t}</text>
+      <text x="18" y="21" text-anchor="middle" font-size="12" font-weight="500" fill="${g.ul.c}" font-family="-apple-system,sans-serif">${g.ul.t}</text>
+      <text x="102" y="21" text-anchor="middle" font-size="12" font-weight="500" fill="${g.ur.c}" font-family="-apple-system,sans-serif">${g.ur.t}</text>
+      <text x="18" y="106" text-anchor="middle" font-size="12" font-weight="500" fill="${g.dl.c}" font-family="-apple-system,sans-serif">${g.dl.t}</text>
+      <text x="102" y="106" text-anchor="middle" font-size="12" font-weight="500" fill="${g.dr.c}" font-family="-apple-system,sans-serif">${g.dr.t}</text>
+      <text x="3" y="70" font-size="7" fill="var(--text3)" font-family="-apple-system,sans-serif" transform="rotate(-90,3,70)">${leftLabel}</text>
+      <text x="117" y="70" font-size="7" fill="var(--text3)" font-family="-apple-system,sans-serif" transform="rotate(90,117,70)">${rightLabel}</text>
+    </svg>
+    ${note ? `<div style="font-size:9px;color:var(--text3)">${note}</div>` : ''}
+  </div>`;
+}
+
+// ── RENDER PCT CELL ────────────────────────────────────────────────────────
+function pctCell(pos, data, isPrimary) {
+  const cls = isPrimary ? 'pct-cell primary' : 'pct-cell';
+  const posLabel = pos;
+
+  if (!data) {
+    return `<div class="${cls}"><div class="pct-pos">${posLabel}</div><div class="pct-empty">—</div></div>`;
+  }
+
+  if (data.val === 'ortho') {
+    return `<div class="${cls}"><div class="pct-pos">${posLabel}</div><div class="pct-ortho">ortho</div></div>`;
+  }
+  if (data.val === "can't fix") {
+    return `<div class="${cls}"><div class="pct-pos">${posLabel}</div><div class="pct-cantfix">can't fix</div><div class="pct-type">${data.type}</div></div>`;
+  }
+
+  return `<div class="${cls}">
+    <div class="pct-pos">${posLabel}</div>
+    <div class="pct-val">${data.val}</div>
+    <div class="pct-type">${data.type}</div>
+  </div>`;
+}
+
+function pctCellDual(pos, top, bot, isPrimary) {
+  const cls = isPrimary ? 'pct-cell primary' : 'pct-cell';
+  return `<div class="${cls}">
+    <div class="pct-pos">${pos}</div>
+    <div class="pct-val" style="font-size:15px">${top.val}</div>
+    <div class="pct-type">${top.type}</div>
+    <div class="pct-divider"></div>
+    <div class="pct-val" style="font-size:15px">${bot.val}</div>
+    <div class="pct-type">${bot.type}</div>
+  </div>`;
+}
+
+function renderPCTGrid(pct, label) {
+  const s = pct.far;
+  const hasHoriz = s.horiz;
+
+  const cells = [
+    // row 1
+    pctCell('R upper', null, false),
+    pctCell('Up', null, false),
+    pctCell('L upper', null, false),
+    // row 2
+    pctCell('Right', s.right, false),
+    // primary
+    (() => {
+      if (hasHoriz) {
+        // dual: top = vertical (R/L etc), bottom = horizontal (ET/XT)
+        return pctCellDual('Primary', s.primary, hasHoriz, true);
+      }
+      return pctCell('Primary', s.primary, true);
+    })(),
+    pctCell('Left', s.left, false),
+    // row 3
+    pctCell('R tilt', s.tiltR, false),
+    pctCell('Down', null, false),
+    pctCell('L tilt', s.tiltL, false),
+  ];
+
+  return `<div>
+    <div class="pct-label">${label}</div>
+    <div class="pct-grid">${cells.join('')}</div>
+    <div class="pct-note">values in PD · <span style="font-weight:700">box</span> = primary position</div>
+  </div>`;
+}
+
+// ── FOLLOW-UP RENDER ───────────────────────────────────────────────────────
+function renderFollowup(p) {
+  const fus = FOLLOWUPS.filter(f => f.id === p.id).sort((a,b) => a.date.localeCompare(b.date));
+  const latest = fus[fus.length - 1];
+
+  // Compare panel: initial vs latest
+  const compareWrap = document.getElementById('mCompare');
+  if (!latest) {
+    compareWrap.innerHTML = `<div style="grid-column:1/-1"><div class="no-fu">No follow-up records yet. Add one below.</div></div>`;
+  } else {
+    const buildPctEom = (pctStr, eomStr, label, isLatest) => {
+      const pctData = parsePCT(pctStr);
+      const eomData = parseEOM(eomStr);
+      let pctBlock = '';
+      if (pctData?.special) {
+        pctBlock = `<div class="pct-block"><div class="pct-label">PCT</div><div class="pct-grid"><div class="pct-cell" style="grid-column:1/-1;grid-row:1/-1"><div class="pct-special">${pctData.special}</div></div></div></div>`;
+      } else if (pctData?.far) {
+        pctBlock = renderPCTGrid(pctData, 'PCT — far');
+      }
+      let eomBlock = '';
+      if (eomData) {
+        eomBlock = `<div class="eom-block" style="margin-top:.75rem">
+          <div class="eom-label-row">EOM</div>
+          <div class="eom-eyes">
+            ${eomSVG(eomData.od, 'OD', false)}
+            <div class="eom-sep"></div>
+            ${eomSVG(eomData.os, 'OS', true)}
+          </div>
+        </div>`;
+      }
+      if (!pctBlock && !eomBlock) return `<div class="no-fu">No data</div>`;
+      return pctBlock + eomBlock;
+    };
+
+    compareWrap.innerHTML = `
+      <div>
+        <div class="compare-col-label">Initial visit · ${p.date || '—'}</div>
+        ${buildPctEom(p.pct, p.eom, 'Initial', false)}
+      </div>
+      <div>
+        <div class="compare-col-label latest">Latest · ${latest.date}</div>
+        ${buildPctEom(latest.pct, latest.eom, 'Latest', true)}
+        ${latest.note ? `<div style="font-size:11px;color:var(--text2);margin-top:6px">備註：${latest.note}</div>` : ''}
+      </div>`;
+  }
+
+  // History list
+  const histWrap = document.getElementById('mFuHistory');
+  if (fus.length === 0) {
+    histWrap.innerHTML = '';
+  } else {
+    histWrap.innerHTML = `<div class="fu-history-title">All follow-up records (${fus.length})</div>` +
+      fus.map(f => `<div class="fu-row-item">
+        <div class="fu-date">${f.date}</div>
+        <div class="fu-content">
+          ${f.pct ? `<div><span style="color:var(--text3);font-size:10px">PCT </span>${f.pct}</div>` : ''}
+          ${f.eom ? `<div><span style="color:var(--text3);font-size:10px">EOM </span>${f.eom}</div>` : ''}
+          ${f.note ? `<div style="color:var(--text3)">${f.note}</div>` : ''}
+        </div>
+      </div>`).join('');
+  }
+}
+
+// ── FOLLOW-UP SAVE ─────────────────────────────────────────────────────────
+async function submitFU() {
+  if (!currentPatient) return;
+  const date = document.getElementById('fuDate').value;
+  if (!date) { alert('Please enter a date.'); return; }
+  const btn = document.getElementById('fuSaveBtn');
+  btn.textContent = 'Saving…'; btn.disabled = true;
+  const newFU = {
+    id: currentPatient.id, date,
+    pct: document.getElementById('fuPct').value.trim(),
+    eom: document.getElementById('fuEom').value.trim(),
+    note: document.getElementById('fuNote').value.trim(),
+  };
+  try {
+    await supaInsert('strab_followup', {
+      'ID': currentPatient.id, 'Date': date,
+      'PCT': newFU.pct,
+      'EOM': newFU.eom,
+      'Note': newFU.note,
+    });
+    FOLLOWUPS.push(newFU);
+    clearFuForm();
+    const ok = document.getElementById('fuSaveOk');
+    ok.style.display = 'inline'; setTimeout(() => ok.style.display = 'none', 3000);
+    renderFollowup(currentPatient);
+  } catch(e) {
+    alert('Save failed. Please check your connection.');
+  } finally {
+    btn.textContent = '💾 Save'; btn.disabled = false;
+  }
+}
+
+function clearFuForm() {
+  ['fuPct','fuEom','fuNote'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
+}
+
+// ── MODAL RENDER ───────────────────────────────────────────────────────────
+function openModal(p) {
+  currentPatient = p;
+  document.getElementById('mIdBadge').textContent = p.id;
+  document.getElementById('mTitle').textContent = p.dx || 'Unknown diagnosis';
+  document.getElementById('mSub').textContent = [p.cc, p.age ? `Age ${p.age}` : null, p.sex || null, p.date].filter(Boolean).join(' · ');
+
+  // Meta
+  const meta = [
+    { label: 'Age', val: p.age ?? '—' },
+    { label: 'Sex', val: p.sex || '—' },
+    { label: 'Referral', val: p.ref || '—' },
+    { label: 'Chief complaint', val: p.cc || '—' },
+    { label: 'Underlying', val: p.und || '—' },
+    { label: 'Fundus', val: p.fd || '—' },
+    { label: 'Neuroimaging', val: p.img || '—' },
+    { label: 'Diagnosis', val: p.dx || '—' },
+  ];
+  document.getElementById('mMeta').innerHTML = meta.map(m =>
+    `<div class="meta-item"><div class="meta-label">${m.label}</div><div class="meta-value">${m.val}</div></div>`
+  ).join('');
+
+  // PCT + EOM — side by side
+  const pctData = parsePCT(p.pct);
+  const eomData = parseEOM(p.eom);
+
+  const gradingStrip = `<div class="grading-strip">
+    <span class="grade-chip"><span class="grade-chip-val" style="color:var(--blue)">+1~4</span><span>Overaction</span></span>
+    <span class="grade-chip"><span class="grade-chip-val" style="color:var(--green)">0</span><span>Full</span></span>
+    <span class="grade-chip"><span class="grade-chip-val" style="color:var(--amber)">−1</span><span>Mild</span></span>
+    <span class="grade-chip"><span class="grade-chip-val" style="color:var(--red)">−2</span><span>Moderate</span></span>
+    <span class="grade-chip"><span class="grade-chip-val" style="color:var(--darkred)">−3</span><span>Can't cross midline</span></span>
+    <span class="grade-chip"><span class="grade-chip-val" style="color:var(--xdarkred)">−4</span><span>Opposite side</span></span>
+  </div>`;
+
+  if (!pctData && !eomData) {
+    document.getElementById('mPctEom').innerHTML =
+      `<div class="no-pct">No PCT or EOM data recorded.</div>` +
+      (p.rem ? `<div style="font-size:12px;color:var(--text2);margin-top:6px">${p.rem}</div>` : '');
+  } else {
+    // Build PCT block
+    let pctBlock = '';
+    if (pctData?.special) {
+      pctBlock = `<div class="pct-block">
+        <div class="pct-label">PCT — far</div>
+        <div class="pct-grid"><div class="pct-cell" style="grid-column:1/-1;grid-row:1/-1"><div class="pct-special">${pctData.special}</div></div></div>
+      </div>`;
+    } else if (pctData?.far) {
+      pctBlock = renderPCTGrid(pctData, 'PCT — far');
+    }
+
+    // Build EOM block (no top margin — it's beside PCT now)
+    let eomBlock = '';
+    if (eomData) {
+      eomBlock = `<div class="eom-block">
+        <div class="eom-label-row">EOM — patient-facing</div>
+        <div class="eom-eyes">
+          ${eomSVG(eomData.od, 'OD', false)}
+          <div class="eom-sep"></div>
+          ${eomSVG(eomData.os, 'OS', true)}
+        </div>
+      </div>`;
+    }
+
+    // Vertical divider between PCT and EOM
+    const divider = (pctBlock && eomBlock)
+      ? `<div style="width:1px;background:var(--border2);border-radius:1px;align-self:stretch;margin:0 4px;"></div>`
+      : '';
+
+    document.getElementById('mPctEom').innerHTML = `
+      <div style="display:flex;gap:20px;align-items:flex-start;flex-wrap:wrap;">
+        ${pctBlock}
+        ${divider}
+        ${eomBlock}
+      </div>
+      ${gradingStrip}
+    `;
+  }
+
+  // Remark
+  const remParts = [p.rem, p.und ? `Underlying: ${p.und}` : '', p.img && p.img !== 'NA' ? `Imaging: ${p.img}` : ''].filter(Boolean);
+  document.getElementById('mRemark').innerHTML = remParts.length
+    ? remParts.join('<br>')
+    : '<span style="color:var(--text3)">—</span>';
+
+  document.getElementById('modal').classList.add('open');
+  document.body.style.overflow = 'hidden';
+
+  // Follow-up
+  document.getElementById('fuDate').value = new Date().toISOString().slice(0,10);
+  clearFuForm();
+  renderFollowup(p);
+}
+
+function closeModal(e) {
+  if (e && e.target !== document.getElementById('modal')) return;
+  document.getElementById('modal').classList.remove('open');
+  document.body.style.overflow = '';
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+// ── TABLE ──────────────────────────────────────────────────────────────────
+function renderTable() {
+  const q = document.getElementById('q').value.toLowerCase();
+  const sf = document.getElementById('sexF').value;
+  const df = document.getElementById('dxF').value;
+
+  const fil = RAW.filter(p => {
+    const mq = !q || [p.id, p.dx, p.cc, p.rem, p.und].join(' ').toLowerCase().includes(q);
+    const ms = !sf || p.sex === sf;
+    const md = !df || p.dx === df;
+    return mq && ms && md;
+  });
+
+  document.getElementById('tstat').textContent = `Showing ${fil.length} of ${RAW.length} patients`;
+
+  const body = document.getElementById('tbody');
+  body.innerHTML = fil.map(p => {
+    const sx = p.sex === 'M' ? '<span class="badge bm">M</span>' : p.sex === 'F' ? '<span class="badge bf">F</span>' : '—';
+    const hasPct = p.pct ? `<span class="has-data">✓ PCT</span>` : `<span class="no-data">—</span>`;
+    const hasEom = p.eom ? `<span class="has-data">✓ EOM</span>` : `<span class="no-data">—</span>`;
+    const fuCnt = FOLLOWUPS.filter(f => f.id === p.id).length;
+    return `<tr onclick="openModal(RAW.find(r=>r.id==='${p.id}'))">
+      <td style="font-weight:500">${p.id}</td>
+      <td>${p.age ?? '—'}</td>
+      <td>${sx}</td>
+      <td>${p.ref || '—'}</td>
+      <td>${p.cc || '—'}</td>
+      <td>${p.dx ? `<span class="dx-tag">${p.dx}</span>` : '—'}</td>
+      <td>${hasPct}</td>
+      <td>${hasEom}</td>
+      <td>${p.date || '—'}${fuCnt > 0 ? ` <span style="font-size:10px;color:var(--green)">· ${fuCnt} FU</span>` : ''}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ── INIT ───────────────────────────────────────────────────────────────────
+const patients = {};
+
+function normalizeRow(row) {
+  // Map Google Sheet column names to internal keys
+  return {
+    id:   String(row['ID']        || '').trim(),
+    age:  row['Age'] !== '' && row['Age'] !== undefined ? parseInt(row['Age']) : null,
+    sex:  String(row['Sex']       || '').trim(),
+    ref:  String(row['Referral']  || '').trim(),
+    cc:   String(row['CC']        || '').trim(),
+    und:  String(row['Underlying']|| '').trim(),
+    fd:   String(row['Fd']        || '').trim(),
+    pct:  String(row['PCT']       || '').trim(),
+    eom:  String(row['EOM']       || '').trim(),
+    img:  String(row['Neuroimage']|| '').trim(),
+    rem:  String(row['Remark']    || '').trim(),
+    dx:   String(row['Dx']        || '').trim(),
+    date: String(row['FirstDate'] || '').trim(),
+  };
+}
+
+function initDashboard() {
+  RAW.forEach(p => patients[p.id + (patients[p.id] ? '_dup' : '')] = p);
+
+  const ages = RAW.map(p => p.age).filter(a => a !== null && !isNaN(a));
+  document.getElementById('kN').textContent = RAW.length;
+  if (ages.length) {
+    document.getElementById('kAge').textContent = Math.round(ages.reduce((a,b) => a+b, 0) / ages.length);
+    document.getElementById('kAgeR').textContent = `range ${Math.min(...ages)}–${Math.max(...ages)} yrs`;
+  }
+  document.getElementById('kPCT').textContent = RAW.filter(p => p.pct).length;
+  document.getElementById('kEOM').textContent = RAW.filter(p => p.eom).length;
+  document.getElementById('kNeuro').textContent = RAW.filter(p => p.img && p.img !== 'NA' && p.img !== '').length;
+  document.getElementById('subtitle').textContent = `${RAW.length} patients · ${FOLLOWUPS.length} follow-ups · refreshed ${new Date().toLocaleTimeString()}`;
+
+  // Dx filter
+  const dxSel = document.getElementById('dxF');
+  dxSel.innerHTML = '<option value="">All diagnoses</option>';
+  const dxSet = [...new Set(RAW.map(p => p.dx).filter(Boolean))].sort();
+  dxSet.forEach(d => { const o = document.createElement('option'); o.value = d; o.textContent = d; dxSel.appendChild(o); });
+
+  renderTable();
+}
+
+async function loadData() {
+  document.getElementById('subtitle').innerHTML = '<span style="opacity:.6">⟳ Fetching live data…</span>';
+  try {
+    const [pRows, fRows] = await Promise.all([
+      supaFetch('strab_patients'),
+      supaFetch('strab_followup')
+    ]);
+    RAW = pRows.map(normalizeRow).filter(p => p.id && p.id.length > 2);
+    FOLLOWUPS = fRows.map(r => ({
+      id:   String(r['ID']   || '').trim(),
+      date: String(r['Date'] || '').trim(),
+      pct:  String(r['PCT']  || '').trim(),
+      eom:  String(r['EOM']  || '').trim(),
+      note: String(r['Note'] || '').trim(),
+    })).filter(f => f.id && f.date);
+    initDashboard();
+  } catch(e) {
+    document.getElementById('subtitle').textContent = '⚠ Could not load live data';
+    console.error(e);
+    RAW = []; FOLLOWUPS = [];
+    initDashboard();
+  }
+}
+
+// Refresh button
+document.getElementById('refreshBtn').onclick = loadData;
+
+loadData();
+</script>
+</body>
+</html>
