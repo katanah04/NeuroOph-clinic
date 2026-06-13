@@ -455,111 +455,68 @@ function parseEOM(raw) {
   const os = { up:0,down:0,left:0,right:0,ul:0,ur:0,dl:0,dr:0,frozen:false,note:'' };
 
   if (r === 'full ou') return { od, os };
-
   if (r.includes('frozen od')) { od.frozen = true; }
   if (r.includes('frozen os')) { os.frozen = true; }
 
-  // Parse limitation/overaction entries
-  // patterns: "limited abduction (-2 od)", "limited supraduction (-2 ou)", "IOOA (+1 od)", "limited adduction (-1 od, -2 os)"
-  const entries = raw.split(/,(?![^(]*\))/); // split by comma not inside parens
-
-  for (const entry of entries) {
-    const e = entry.trim();
-
-    // IOOA
-    const iooaMatch = e.match(/IOOA\s*\(([+\-\d.]+)\s+(od|os|ou)\)/i);
-    if (iooaMatch) {
-      const grade = iooaMatch[1];
-      const eye = iooaMatch[2].toLowerCase();
-      // IO = elevation in adduction
-      // OD: nasal=right, so IO action = upper-right (ur)
-      // OS: nasal=left, so IO action = upper-left (ul)
-      if (eye === 'od' || eye === 'ou') od.ur = grade;
-      if (eye === 'os' || eye === 'ou') os.ul = grade;
-      continue;
+  const applyGrade = (direction, gradeStr, eyeCode) => {
+    const g = gradeStr.replace(/^-/, '');
+    switch(direction) {
+      case 'abduction':
+        if (eyeCode === 'od' || eyeCode === 'ou') od.left = g;
+        if (eyeCode === 'os' || eyeCode === 'ou') os.right = g;
+        break;
+      case 'adduction':
+        if (eyeCode === 'od' || eyeCode === 'ou') od.right = g;
+        if (eyeCode === 'os' || eyeCode === 'ou') os.left = g;
+        break;
+      case 'supraduction':
+        if (eyeCode === 'od' || eyeCode === 'ou') od.up = g;
+        if (eyeCode === 'os' || eyeCode === 'ou') os.up = g;
+        break;
+      case 'infraduction':
+        if (eyeCode === 'od' || eyeCode === 'ou') od.down = g;
+        if (eyeCode === 'os' || eyeCode === 'ou') os.down = g;
+        break;
     }
+  };
 
-    // limited/restricted movement
-    const limMatch = e.match(/limited\s+(\w+)\s*\(([^)]+)\)/i);
-    if (limMatch) {
-      const dir = limMatch[1].toLowerCase();
-      const details = limMatch[2];
+  // IOOA
+  const iooaMatches = raw.matchAll(/IOOA\s*\(([+\-\d.]+)\s+(od|os|ou)\)/gi);
+  for (const m of iooaMatches) {
+    const grade = m[1];
+    const eye = m[2].toLowerCase();
+    if (eye === 'od' || eye === 'ou') od.ur = grade;
+    if (eye === 'os' || eye === 'ou') os.ul = grade;
+  }
 
-      // Parse eye-specific grades: "-2 od", "-1 os", "-1 od, -2 os", "-2 ou", "-1~2 os"
-      const eyeParts = details.match(/([\-\d~.]+)\s*(od|os|ou)/gi) || [details + ' ou'];
+  // Find all "limited X (...)" or standalone "X (...)" direction entries
+  // First normalise: add "limited " prefix if missing after a comma
+  // Strategy: find all direction keywords with their parenthesised grades
+  const DIRS = 'abduction|adduction|supraduction|infraduction';
+  const dirRegex = new RegExp(`(?:limited\\s+)?(${DIRS})\\s*\\(([^)]+)\\)`, 'gi');
+  const dirMatches = raw.matchAll(dirRegex);
 
-      for (const ep of eyeParts) {
-        const m = ep.match(/([\-\d~.]+)\s*(od|os|ou)/i);
-        if (!m) continue;
-        let grade = m[1];
-        // strip leading minus for storage, keep sign info
-        const eye = m[2].toLowerCase();
+  for (const match of dirMatches) {
+    const dir = match[1].toLowerCase();
+    const details = match[2];
 
-        const setDir = (eyeObj, direction, g) => {
-          // In patient-facing view:
-          // OD: temporal=left, nasal=right
-          // OS: temporal=right, nasal=left
-          switch(direction) {
-            case 'abduction':
-              // OD abducts left, OS abducts right
-              if (eye === 'od' || eye === 'ou') eyeObj === od ? od.left = g : null;
-              if (eye === 'os' || eye === 'ou') eyeObj === os ? os.right = g : null;
-              break;
-            case 'adduction':
-              if (eye === 'od' || eye === 'ou') eyeObj === od ? od.right = g : null;
-              if (eye === 'os' || eye === 'ou') eyeObj === os ? os.left = g : null;
-              break;
-            case 'supraduction': eyeObj.up = g; break;
-            case 'infraduction': eyeObj.down = g; break;
-          }
-        };
-
-        const applyGrade = (direction, gradeStr, eyeCode) => {
-          const apply = (obj) => {
-            switch(direction) {
-              case 'abduction':
-                if (eyeCode === 'od') obj === od ? (od.left = gradeStr) : null;
-                else if (eyeCode === 'os') obj === os ? (os.right = gradeStr) : null;
-                else { od.left = gradeStr; os.right = gradeStr; }
-                break;
-              case 'adduction':
-                if (eyeCode === 'od') obj === od ? (od.right = gradeStr) : null;
-                else if (eyeCode === 'os') obj === os ? (os.left = gradeStr) : null;
-                else { od.right = gradeStr; os.left = gradeStr; }
-                break;
-              case 'supraduction':
-                if (eyeCode === 'od') od.up = gradeStr;
-                else if (eyeCode === 'os') os.up = gradeStr;
-                else { od.up = gradeStr; os.up = gradeStr; }
-                break;
-              case 'infraduction':
-                if (eyeCode === 'od') od.down = gradeStr;
-                else if (eyeCode === 'os') os.down = gradeStr;
-                else { od.down = gradeStr; os.down = gradeStr; }
-                break;
-            }
-          };
-          if (eyeCode === 'od') apply(od);
-          else if (eyeCode === 'os') apply(os);
-          else { apply(od); apply(os); }
-        };
-
-        applyGrade(dir, grade.replace(/^-/, ''), eye);
-      }
-      continue;
+    // Parse eye-specific grades inside parens: "-2 od", "-1 os", "-2 ou", "-1~2 os", "-1 od, -2 os"
+    const eyeParts = details.matchAll(/([\-\d~.]+)\s*(od|os|ou)/gi);
+    let found = false;
+    for (const ep of eyeParts) {
+      found = true;
+      applyGrade(dir, ep[1], ep[2].toLowerCase());
     }
-
-    // slow saccade note
-    if (e.includes('slow saccade')) {
-      const m = e.match(/adduction\s*\(([\-\d~.]+)\s*(od|os|ou)[^)]*\)/i);
-      if (m) {
-        const g = m[1].replace(/^-/,'');
-        const eye = m[2].toLowerCase();
-        if (eye === 'od' || eye === 'ou') od.right = g;
-        if (eye === 'os' || eye === 'ou') os.left = g;
-        os.note = 'slow saccade';
-      }
+    // If no eye specified, default to ou
+    if (!found) {
+      const gradeOnly = details.match(/([\-\d~.]+)/);
+      if (gradeOnly) applyGrade(dir, gradeOnly[1], 'ou');
     }
+  }
+
+  // Slow saccade note
+  if (r.includes('slow saccade')) {
+    os.note = 'slow saccade';
   }
 
   return { od, os };
